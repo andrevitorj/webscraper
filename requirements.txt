@@ -1,4 +1,3 @@
 flask
-selenium
 numpy
 scipy
