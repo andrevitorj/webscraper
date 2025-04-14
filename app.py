@@ -27,7 +27,8 @@ def ajustar_por_fator_casa(stats):
 
 def ajustar_por_lesoes(stats, lesoes):
     fator = 0.90 if "atacante" in lesoes else 1.0
-    return {k: v * fator for k, v in stats.items()}
+    return {k: (v * fator if isinstance(v, (int, float)) else v) for k, v in stats.items()}
+
 
 def previsao_poisson(golsA, golsB):
     max_gols = 5
