@@ -3,12 +3,21 @@ import requests
 from bs4 import BeautifulSoup
 import numpy as np
 from scipy.stats import poisson
-import re
 
 app = Flask(__name__)
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 
+# Links fixos para times populares (temporada 2024-2025)
+LINKS_FIXOS = {
+    "real madrid": "https://fbref.com/en/squads/53a2f082/2024-2025/matchlogs/all_comps/schedule/Real-Madrid-Scores-and-Fixtures-All-Competitions",
+    "barcelona": "https://fbref.com/en/squads/206d90db/2024-2025/matchlogs/all_comps/schedule/Barcelona-Scores-and-Fixtures-All-Competitions"
+}
+
 def encontrar_url_matchlogs(time_nome):
+    key = time_nome.lower()
+    if key in LINKS_FIXOS:
+        return LINKS_FIXOS[key]
+
     search_url = f"https://fbref.com/en/search/search.fcgi?search={time_nome.replace(' ', '+')}"
     resp = requests.get(search_url, headers=HEADERS)
     soup = BeautifulSoup(resp.text, "html.parser")
@@ -44,7 +53,7 @@ def extrair_stats_dos_jogos(url):
         if not col:
             continue
         try:
-            stats["xG"].append(float(col[-2].text))  # xG
+            stats["xG"].append(float(col[-2].text))
             stats["chutes"].append(int(col[8].text))
             stats["posse"].append(float(col[6].text.replace("%", "")))
             stats["finalizacoes"].append(int(col[10].text))
