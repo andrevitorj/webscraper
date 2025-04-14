@@ -8,20 +8,24 @@ import re
 app = Flask(__name__)
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 
-def encontrar_url_time_fbref(time_nome):
-    pesquisa_url = f"https://fbref.com/en/search/search.fcgi?search={time_nome.replace(' ', '+')}"
-    resp = requests.get(pesquisa_url, headers=HEADERS)
+def encontrar_url_matchlogs(time_nome):
+    search_url = f"https://fbref.com/en/search/search.fcgi?search={time_nome.replace(' ', '+')}"
+    resp = requests.get(search_url, headers=HEADERS)
     soup = BeautifulSoup(resp.text, "html.parser")
-    link = soup.find("div", class_="search-item-url")
-    if link:
-        href = link.text.strip()
-        return f"https://fbref.com{href}"
+    resultado = soup.select_one("div.search-item-url")
+    if resultado:
+        base_url = "https://fbref.com"
+        href = resultado.text.strip()
+        href = re.sub(r"/[^/]+$", "/matchlogs/all_comps/schedule/", href)
+        return base_url + href
     return None
 
-def extrair_stats_dos_jogos(url_time):
-    resp = requests.get(url_time, headers=HEADERS)
+def extrair_stats_dos_jogos(url):
+    resp = requests.get(url, headers=HEADERS)
     soup = BeautifulSoup(resp.text, "html.parser")
-    tabela = soup.find("table", id="matchlogs_for")
+    tabela = soup.find("table")
+    if not tabela:
+        return None
 
     stats = {
         "xG": [],
@@ -34,23 +38,20 @@ def extrair_stats_dos_jogos(url_time):
         "faltas": []
     }
 
-    if not tabela:
-        return None
-
-    linhas = tabela.find_all("tr", class_=lambda x: x != "thead")[:10]
+    linhas = tabela.select("tbody tr")[:10]
     for linha in linhas:
         col = linha.find_all("td")
         if not col:
             continue
         try:
             stats["xG"].append(float(col[-2].text))  # xG
-            stats["chutes"].append(int(col[9].text))
-            stats["posse"].append(float(col[7].text.replace("%", "")))
-            stats["finalizacoes"].append(int(col[11].text))
-            stats["escanteios"].append(int(col[17].text))
-            stats["cartoes"].append(int(col[19].text))
-            stats["passes"].append(int(col[13].text))
-            stats["faltas"].append(int(col[18].text))
+            stats["chutes"].append(int(col[8].text))
+            stats["posse"].append(float(col[6].text.replace("%", "")))
+            stats["finalizacoes"].append(int(col[10].text))
+            stats["escanteios"].append(int(col[16].text))
+            stats["cartoes"].append(int(col[18].text))
+            stats["passes"].append(int(col[12].text))
+            stats["faltas"].append(int(col[17].text))
         except:
             continue
 
@@ -65,10 +66,10 @@ def media_ponderada(valores):
     return round(np.average(valores[-10:], weights=pesos), 2)
 
 def extrair_stats_fbref(time_nome):
-    url_time = encontrar_url_time_fbref(time_nome)
-    if not url_time:
+    url = encontrar_url_matchlogs(time_nome)
+    if not url:
         return None
-    stats_jogos = extrair_stats_dos_jogos(url_time)
+    stats_jogos = extrair_stats_dos_jogos(url)
     if not stats_jogos:
         return None
 
